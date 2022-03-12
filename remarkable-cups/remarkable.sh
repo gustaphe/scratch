@@ -7,12 +7,14 @@ jobcopies=${4}
 joboptions=${5}
 jobfile=${6}
 
-rmapi=/home/mark/gosrc/bin/rmapi
+rmapi=/usr/bin/rmapi
 export RMAPI_CONFIG=$(eval echo ~${cupsuser}/.config/rmapi/rmapi.conf)
 
-printtime=$(date +%Y-%b-%d-%H-%M)
-sanitized_jobtitle="$(echo ${jobtitle} | tr [[:blank:]:/%\&=+?\\\\#\'\`\´\*] _ | sed 's/ü/u/g;s/ä/a/g;s/ö/o/g;s/Ü/U/g;s/Ä/A/g;s/Ö/O/g;s/{\\ß}/ss/g' | cut -f 1 -d '.' ).pdf"
+printtime=$(date +%Y-%m-%dT%H:%M)
+sanitized_jobtitle="$(echo ${jobtitle} | tr [[:blank:]:/%\&=+?\\\\#\'\`\´\*] _ | sed 's/ü/u/g;s/ä/a/g;s/ö/o/g;s/Ü/U/g;s/Ä/A/g;s/Ö/O/g;s/{\\ß}/ss/g;s/ /_/g' | cut -f 1 -d '.' ).pdf"
 outname=/tmp/${printtime}_${sanitized_jobtitle}
+
+#echo "$(date +%Y-%m-%d:%T%H:%M):\t${1}\t${2}\t${3}\t${4}\t${5}\t${6}" >> /tmp/cupslog #DEBUG
 
 case ${#} in
     0)
@@ -33,7 +35,13 @@ case ${#} in
         ;;
     
     6)
-	cat ${6} > ${outname}
+	if pdfinfo "${jobfile}" > /dev/null ; then
+		# jobfile is a pdf
+		cp "${jobfile}" ${outname}
+	else
+		# jobfile is not a pdf, assume ps
+		ps2pdf "${jobfile}" ${outname}
+	fi
         if [ ! -e ${DEVICE_URI#remarkable:} ]; then
 	    ${rmapi} put ${outname} ${DEVICE_URI#remarkable:}
 	else
